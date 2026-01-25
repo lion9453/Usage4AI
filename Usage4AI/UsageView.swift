@@ -2,7 +2,6 @@ import SwiftUI
 
 struct UsageView: View {
     @ObservedObject var manager: UsageManager
-    @State private var isRefreshing = false
     @State private var showSettings = false
 
     var body: some View {
@@ -96,17 +95,17 @@ struct UsageView: View {
                     Spacer()
 
                     Button(action: {
-                        withAnimation(.linear(duration: 0.5).repeatCount(3, autoreverses: false)) {
-                            isRefreshing = true
-                        }
                         Task {
                             await manager.fetchUsage()
-                            isRefreshing = false
                         }
                     }) {
                         Image(systemName: "arrow.clockwise")
                             .font(.caption)
-                            .rotationEffect(.degrees(isRefreshing ? 360 : 0))
+                            .rotationEffect(.degrees(manager.isLoading ? 360 : 0))
+                            .animation(
+                                manager.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
+                                value: manager.isLoading
+                            )
                     }
                     .buttonStyle(.borderless)
                     .disabled(manager.isLoading)
