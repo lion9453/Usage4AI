@@ -57,14 +57,14 @@ struct UsageResponse: Codable {
 struct UsageLimit: Codable {
     /// API 回傳的 utilization 是百分比 (0-100)，不是小數
     let utilization: Double
-    let resetsAt: String
+    let resetsAt: String?
 
     enum CodingKeys: String, CodingKey {
         case utilization
         case resetsAt = "resets_at"
     }
 
-    init(utilization: Double, resetsAt: String) {
+    init(utilization: Double, resetsAt: String?) {
         self.utilization = min(max(utilization, 0), 100)
         self.resetsAt = resetsAt
     }
@@ -73,7 +73,7 @@ struct UsageLimit: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let rawUtilization = try container.decode(Double.self, forKey: .utilization)
         self.utilization = min(max(rawUtilization, 0), 100)
-        self.resetsAt = try container.decode(String.self, forKey: .resetsAt)
+        self.resetsAt = try container.decodeIfPresent(String.self, forKey: .resetsAt)
     }
 }
 
@@ -89,9 +89,14 @@ struct DisplayUsage {
         self.name = name
         self.icon = icon
         self.percentage = Int(limit.utilization)
-        let (timeStr, progress) = DisplayUsage.parseResetTime(from: limit.resetsAt, windowHours: name.contains("5-Hour") ? 5 : 168)
-        self.remainingTime = timeStr
-        self.timeProgress = progress
+        if let resetsAt = limit.resetsAt {
+            let (timeStr, progress) = DisplayUsage.parseResetTime(from: resetsAt, windowHours: name.contains("5-Hour") ? 5 : 168)
+            self.remainingTime = timeStr
+            self.timeProgress = progress
+        } else {
+            self.remainingTime = "--"
+            self.timeProgress = 0.0
+        }
         self.status = UsageStatus.from(percentage: limit.utilization)
     }
 

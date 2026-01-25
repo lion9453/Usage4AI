@@ -151,6 +151,10 @@ class UsageManager: ObservableObject {
 
         do {
             // 使用快取的 token，如果沒有則嘗試從 Keychain 讀取
+            if cachedToken == nil {
+                refreshToken()
+            }
+
             guard let token = cachedToken else {
                 throw APIError.unauthorized
             }
