@@ -94,21 +94,11 @@ struct UsageView: View {
 
                     Spacer()
 
-                    Button(action: {
+                    RefreshButton(isLoading: manager.isLoading) {
                         Task {
                             await manager.fetchUsage()
                         }
-                    }) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.caption)
-                            .rotationEffect(.degrees(manager.isLoading ? 360 : 0))
-                            .animation(
-                                manager.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
-                                value: manager.isLoading
-                            )
                     }
-                    .buttonStyle(.borderless)
-                    .disabled(manager.isLoading)
                 }
 
                 Divider()
@@ -264,6 +254,37 @@ struct UsageLimitRow: View {
         case .warning: return .yellow
         case .critical: return .red
         case .exhausted: return .gray
+        }
+    }
+}
+
+/// Isolated refresh button to prevent animation from triggering parent view redraws
+struct RefreshButton: View {
+    let isLoading: Bool
+    let action: () -> Void
+
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "arrow.clockwise")
+                .font(.caption)
+                .rotationEffect(.degrees(rotation))
+        }
+        .buttonStyle(.borderless)
+        .disabled(isLoading)
+        .onChange(of: isLoading) { _, newValue in
+            if newValue {
+                // Start continuous rotation
+                withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+            } else {
+                // Stop animation and reset
+                withAnimation(.default) {
+                    rotation = 0
+                }
+            }
         }
     }
 }
