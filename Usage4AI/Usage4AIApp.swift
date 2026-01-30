@@ -58,13 +58,41 @@ struct MenuBarLabel: View {
         min(1.0, Double(usagePercentage) / 100.0)
     }
 
+    var body: some View {
+        HStack(spacing: 5) {
+            MenuBarProgressBars(
+                usageProgress: usageProgress,
+                timeProgress: manager.timeProgress,
+                statusColor: manager.statusColor
+            )
+
+            Text("\(usagePercentage)%")
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .frame(width: 28, alignment: .trailing)
+        }
+    }
+}
+
+/// Separate view for progress bars with equatable conformance to prevent unnecessary redraws
+struct MenuBarProgressBars: View, Equatable {
+    let usageProgress: Double
+    let timeProgress: Double
+    let statusColor: Color
+
+    static func == (lhs: MenuBarProgressBars, rhs: MenuBarProgressBars) -> Bool {
+        // Only redraw when values actually change (with small tolerance for floating point)
+        abs(lhs.usageProgress - rhs.usageProgress) < 0.001 &&
+        abs(lhs.timeProgress - rhs.timeProgress) < 0.001 &&
+        lhs.statusColor == rhs.statusColor
+    }
+
     private var progressBarsImage: NSImage {
         let barWidth = Constants.MenuBar.barWidth
         let barHeight = Constants.MenuBar.barHeight
         let spacing = Constants.MenuBar.barSpacing
         let totalHeight = barHeight * 2 + spacing
 
-        let image = NSImage(size: NSSize(width: barWidth, height: totalHeight), flipped: true) { rect in
+        let image = NSImage(size: NSSize(width: barWidth, height: totalHeight), flipped: true) { _ in
             let cornerRadius = Constants.MenuBar.cornerRadius
 
             // Top bar background
@@ -78,7 +106,7 @@ struct MenuBarLabel: View {
                 let progressWidth = max(barWidth * self.usageProgress, cornerRadius * 2)
                 let topProgressRect = NSRect(x: 0, y: 0, width: progressWidth, height: barHeight)
                 let topProgressPath = NSBezierPath(roundedRect: topProgressRect, xRadius: cornerRadius, yRadius: cornerRadius)
-                NSColor(self.manager.statusColor).setFill()
+                NSColor(self.statusColor).setFill()
                 topProgressPath.fill()
             }
 
@@ -90,8 +118,8 @@ struct MenuBarLabel: View {
             bottomBgPath.fill()
 
             // Bottom bar progress (time)
-            if self.manager.timeProgress > 0 {
-                let timeProgressWidth = max(barWidth * self.manager.timeProgress, cornerRadius * 2)
+            if self.timeProgress > 0 {
+                let timeProgressWidth = max(barWidth * self.timeProgress, cornerRadius * 2)
                 let bottomProgressRect = NSRect(x: 0, y: bottomY, width: timeProgressWidth, height: barHeight)
                 let bottomProgressPath = NSBezierPath(roundedRect: bottomProgressRect, xRadius: cornerRadius, yRadius: cornerRadius)
                 NSColor.cyan.setFill()
@@ -106,13 +134,7 @@ struct MenuBarLabel: View {
     }
 
     var body: some View {
-        HStack(spacing: 5) {
-            Image(nsImage: progressBarsImage)
-
-            Text("\(usagePercentage)%")
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .frame(width: 28, alignment: .trailing)
-        }
+        Image(nsImage: progressBarsImage)
     }
 }
 
